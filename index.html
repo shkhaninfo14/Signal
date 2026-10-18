@@ -1,0 +1,95 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traffic Signal</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#171717;color:white;text-align:center}
+h2{margin:22px 8px}
+button{width:90%;max-width:420px;padding:22px;margin:10px auto;border:0;border-radius:14px;font-size:25px;font-weight:bold;color:white}
+.red{background:#e5252a}.yellow{background:#f5c400;color:#111}.green{background:#159447}
+#status{padding:12px;color:#ddd}
+#signal{display:none;position:fixed;inset:0;align-items:center;justify-content:center;font-size:12vw;font-weight:bold}
+#signal span{background:#0005;padding:12px 24px;border-radius:12px}
+a{color:#8ab4ff}
+</style>
+</head>
+<body>
+<div id="control">
+<h2>🚦 Traffic Signal Controller</h2>
+<div id="status">Connecting…</div>
+<button class="red" onclick="sendColor('RED')">RED</button>
+<button class="yellow" onclick="sendColor('YELLOW')">YELLOW</button>
+<button class="green" onclick="sendColor('GREEN')">GREEN</button>
+<p><a href="?mode=display">Open Signal Display</a></p>
+</div>
+<div id="signal"><span id="label">WAITING</span></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "PASTE_API_KEY_HERE",
+  authDomain: "signal-a9cad.firebaseapp.com",
+  databaseURL: "https://signal-a9cad-default-rtdb.firebaseio.com/",
+  projectId: "signal-a9cad",
+  appId: "PASTE_APP_ID_HERE"
+};
+
+const control = document.getElementById("control");
+const signal = document.getElementById("signal");
+const statusText = document.getElementById("status");
+const mode = new URLSearchParams(location.search).get("mode");
+let db = null;
+
+if (mode === "display") {
+  control.style.display = "none";
+  signal.style.display = "flex";
+  document.body.style.background = "#111";
+}
+
+function showColor(color) {
+  const colors = {
+    RED: "#e5252a",
+    YELLOW: "#f5c400",
+    GREEN: "#159447"
+  };
+  if (!colors[color]) return;
+  signal.style.background = colors[color];
+  document.getElementById("label").textContent = color;
+  document.getElementById("label").style.color =
+    color === "YELLOW" ? "#111" : "#fff";
+}
+
+try {
+  firebase.initializeApp(firebaseConfig);
+  firebase.auth().signInAnonymously().then(() => {
+    db = firebase.database();
+    statusText.textContent = "Connected. Ready to send signals.";
+    db.ref("signal/color").on("value", snapshot => {
+      const color = snapshot.val();
+      if (color) showColor(color);
+    });
+  }).catch(error => {
+    statusText.textContent = "Connection error: " + error.message;
+  });
+} catch (error) {
+  statusText.textContent = "Add your Firebase configuration first.";
+}
+
+function sendColor(color) {
+  if (!db) {
+    alert("Wait for Firebase to connect.");
+    return;
+  }
+  db.ref("signal/color").set(color)
+    .then(() => statusText.textContent = "Signal sent: " + color)
+    .catch(error => alert("Could not send signal: " + error.message));
+}
+</script>
+</body>
+</html>
